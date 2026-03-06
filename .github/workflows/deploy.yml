@@ -1,0 +1,33 @@
+name: Deploy AgPro Backend
+
+on:
+  push:
+    branches: [ main ] # Dispara o deploy toda vez que você der push na main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v3
+
+      - name: Executar comandos na VM via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # Entra na pasta do projeto (garanta que ela exista na VM)
+            mkdir -p ~/projetos/server_agepro_app
+            cd ~/projetos/server_agepro_app
+            
+            # Se a pasta estiver vazia, clona. Se não, atualiza.
+            if [ -d ".git" ]; then
+              git pull origin main
+            else
+              git clone https://github.com/${{ github.repository }}.git .
+            fi
+            
+            # Sobe os containers (Buildando a imagem nova)
+            sudo docker-compose up -d --build
