@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  # Serviço do seu Backend AgPro
+  agpro-backend:
+    build: .
+    container_name: agpro_app
+    restart: always
+    # Adicionamos permissão para o Puppeteer (WhatsApp) rodar de forma estabilizada no Linux
+    cap_add:
+      - SYS_ADMIN
+    ports:
+      - "80:80"     # Tráfego HTTP Normal (será redirecionado) 
+      - "443:443"   # Tráfego HTTPS (SSL gerado pelo certbot)
+    # Lê TODAS as variáveis do seu arquivo .env da VPS (Google, Banco, SMTP)
+    env_file:
+      - .env
+    volumes:
+      # MAPEAMENTO DOS CERTIFICADOS LETS ENCRYPT:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      
+      # PERSISTÊNCIA:
+      # Mantém a sessão do WhatsApp ativa mesmo se o container reiniciar ou for atualizado
+      - whatsapp_session_volume:/app/.wwebjs_auth
+      
+      # Logs expostos para facilitar o debug fora do container
+      - ./logs:/app/logs
+
+volumes:
+  whatsapp_session_volume:
