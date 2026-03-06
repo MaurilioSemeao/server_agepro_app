@@ -2,6 +2,8 @@ import { Client as WhatsAppClient, LocalAuth } from 'whatsapp-web.js';
 import { PrismaClient } from '@prisma/client';
 import { io } from '../server';
 import qrcode from 'qrcode-terminal';
+import fs from 'fs';
+import path from 'path';
 
 const prisma = new PrismaClient();
 
@@ -33,6 +35,18 @@ export const whatsappMultiService = {
         globalUserId = userId; // Grava o solicitante atual
 
         console.log(`[WA-SINGLE] Inicializando sessão ÚNICA de WhatsApp disparada pelo usuário: ${userId}`);
+
+        // Dica de ADS / Prevenção de container Restart: Limpar lock de perfil do Chromium
+        const authPath = path.join(process.cwd(), '.wwebjs_auth', `session-single_bot_session`);
+        const lock1 = path.join(authPath, 'SingletonLock');
+        const lock2 = path.join(authPath, 'Default', 'SingletonLock');
+        try {
+            if (fs.existsSync(lock1)) fs.unlinkSync(lock1);
+            if (fs.existsSync(lock2)) fs.unlinkSync(lock2);
+            console.log(`[WA-SINGLE] Arquivos SingletonLock limpos preventivamente.`);
+        } catch (err) {
+            console.log(`[WA-SINGLE] Erro ao limpar SingletonLock (Pode não existir).`);
+        }
 
         const client = new WhatsAppClient({
             authStrategy: new LocalAuth({ clientId: `single_bot_session` }), // Uma ÚNICA pasta global (nunca concorre)
