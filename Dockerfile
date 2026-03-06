@@ -40,8 +40,12 @@ RUN npx prisma generate
 # Compila o TypeScript em Javascript (cria a pasta /dist)
 RUN npm run build
 
+# Copia e dá permissão de execução ao Entrypoint
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 # Expõe a porta 5000 do container
 EXPOSE 5000
 
-# Adicionamos um comando start-cloud que roda as migrações caso existam e depois o node no dist
-CMD ["sh", "-c", "npx prisma migrate deploy && npm start"]
+# Executa o script que limpa locks e sobe o Node
+CMD ["/entrypoint.sh"]
