@@ -19,9 +19,41 @@ export const integrationController = {
             });
 
             // Mapeia para um formato mais fácil de ler no frontend
+            let googleStatus = integrations.find(i => i.provider === 'GOOGLE')?.status || 'DISCONNECTED';
+            let whatsappStatus = integrations.find(i => i.provider === 'WHATSAPP')?.status || 'DISCONNECTED';
+
+            // Verificação em tempo real: O banco pode dizer CONNECTED, mas a sessão em memória pode ter crachado
+            if (whatsappStatus === 'CONNECTED') {
+                const waClient = whatsappMultiService.getClient(userId);
+                if (waClient) {
+                    try {
+                        const state = await waClient.getState();
+                        if (state !== 'CONNECTED') {
+                            whatsappStatus = 'DISCONNECTED';
+                            // Atualiza banco para refletir a realidade
+                            await prisma.integration.updateMany({
+                                where: { userId, provider: 'WHATSAPP' },
+                                data: { status: 'DISCONNECTED' }
+                            });
+                        }
+                    } catch (e) {
+                        whatsappStatus = 'DISCONNECTED';
+                    }
+                } else {
+                    // Se não tem cliente na memória e ele diz que tá CONNECTED, a sessão caiu (server restart).
+                    // Nós mostramos DISCONNECTED no app pra pessoa saber que precisa reconectar e recriar o bot ativo
+                    // O Bot dispatch() à noite também vai falhar porque crachou e tentou reconectar sem ler QR de novo.
+                    whatsappStatus = 'DISCONNECTED';
+                    await prisma.integration.updateMany({
+                        where: { userId, provider: 'WHATSAPP' },
+                        data: { status: 'DISCONNECTED' }
+                    });
+                }
+            }
+
             const statusMap = {
-                GOOGLE: integrations.find(i => i.provider === 'GOOGLE')?.status || 'DISCONNECTED',
-                WHATSAPP: integrations.find(i => i.provider === 'WHATSAPP')?.status || 'DISCONNECTED'
+                GOOGLE: googleStatus,
+                WHATSAPP: whatsappStatus
             };
 
             res.json(statusMap);
@@ -42,11 +74,15 @@ export const integrationController = {
             // Roda em background
             whatsappMultiService.initializeClient(userId).then(client => {
                 if (!client) return;
+
+                let emailSent = false; // Controle de SPAM para enviar o email 1 única vez
+
                 // Ao criar, o evento 'qr' dentro de initializeClient lidará com o QrCode
                 client.on('qr', async (qr) => {
                     // Busca o token gerado na memória
                     const tokenEntry = Object.entries(qrCodeStorage).find(([_, data]) => data.userId === userId);
-                    if (tokenEntry) {
+                    if (tokenEntry && !emailSent) {
+                        emailSent = true; // Impede que mande os próximos QRs refresh do puppeteer para o email da pessoa
                         const [token] = tokenEntry;
 
                         // Determinar a URL pública do servidor (ex: ngrok, cloudflare) ou localhost na variável de ambiente
