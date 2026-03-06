@@ -29,9 +29,17 @@ jobs:
               git pull origin main
             else
               echo "Pasta existe mas não é git. Preparando para clone..."
-              # Remove tudo EXCETO o arquivo .env para o clone funcionar
-              find . -maxdepth 1 ! -name '.env' ! -name '.' -exec rm -rf {} +
+              # Mova o .env para um local temporário fora do diretório, caso exista
+              if [ -f ".env" ]; then mv .env ~/env_agepro_backup; fi
+              
+              # Limpa qualquer outro lixo para deixar a pasta 100% vazia (requisito do git clone)
+              rm -rf ./* ./.[!.]* 2>/dev/null || true
+              
+              # Agora o git clone vai funcionar porque a pasta está vazia
               git clone https://github.com/MaurilioSemeao/server_agepro_app.git .
+              
+              # Devolve o .env para o local original
+              if [ -f "~/env_agepro_backup" ]; then mv ~/env_agepro_backup .env; fi
             fi
             
             # Sobe os containers (Buildando a imagem nova)
