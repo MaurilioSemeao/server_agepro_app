@@ -49,11 +49,11 @@ export const whatsappDispatchService = {
             });
 
             if (activeWaIntegrations.length === 0) {
-                Logger.info('[DISPATCH] Nenhum usuário com WhatsApp conectado encontrado. Encerrando rotina.');
+                Logger.info('[DISPATCH] Nenhum usuário com WhatsApp conectado no BD. Encerrando rotina.');
                 return { success: true, message: 'Nenhum usuário com WhatsApp conectado.' };
             }
 
-            Logger.info(`[DISPATCH] ${activeWaIntegrations.length} usuários com WhatsApp conectados encontrados.`);
+            Logger.info(`[DISPATCH] ${activeWaIntegrations.length} usuários com status CONNECTED encontrados.`);
 
             let totalDisparos = 0;
 
@@ -63,12 +63,13 @@ export const whatsappDispatchService = {
                 const user = waInt.user;
 
                 // Verifica se o singleton/cliente WA existe na memória do servidor para aquele usuário
-                // Se rodar num servidor sem cache, precisará inicializar, mas vamos assumir que a sessão 
-                // LocalAuth reconectará se for chamada e o singleton não existir. O `getClient` aqui é mais pra usar
-                // o singleton aberto. Se não houver, mandamos pular ou tentamos abrir.
                 let waClient = whatsappMultiService.getClient(userId);
 
                 if (!waClient) {
+                    // ADICIONADO: Se o bot caiu (server reload), o initialize aqui 
+                    // vai disparar o QR Code novo. Então talvez o usuário receba 
+                    // email do nada se ele já era CONNECTED mas a sessão caiu.
+                    // Isso é o comportamento correto para auto-manutenção de sessão ativa.
                     Logger.info(`[DISPATCH] Cliente WhatsApp não rodando na memória para usuário ${userId}. Tentando instanciar...`);
                     waClient = await whatsappMultiService.initializeClient(userId);
                 }
@@ -131,7 +132,7 @@ export const whatsappDispatchService = {
 
                         // Extrai o nome limpo do summary (Remove prefixos de Consulta/Agendamento indesejados)
                         let clientName = event.summary?.trim() || 'Cliente';
-                        const prefixRegex = /^(?:consulta|agendamento)s?[^\w]*\s*/i;
+                        const prefixRegex = /^(?:consulta|agendamento|att)s?[^\w]*\s*/i;
 
                         clientName = clientName.replace(prefixRegex, '').trim();
                         if (!clientName) {
@@ -143,10 +144,10 @@ export const whatsappDispatchService = {
                         const eventHourStr = eventDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
                         // Monta a mensagem final humanizada usando os props
-                        const msgText = `Olá, aqui é o(a) ${user.name} passando pra lembrar da sua consulta amanhã às ${eventHourStr}. Caso não puder comparecer, me avise com antecedência por favor!`;
+                        const msgText = `Olá, ${clientName.split(" ", 1)[0]}, passando pra lembrar da sua consulta amanhã às ${eventHourStr}. Caso não puder comparecer, me avise com antecedência por favor!`;
 
                         // Aplica o atraso antispam ANTES do disparo (entre 30s e 60s)
-                        const randomDelay = Math.floor(Math.random() * (60000 - 30000 + 1)) + 30000;
+                        const randomDelay = Math.floor(Math.random() * (50000 - 45000 + 1)) + 30000;
                         Logger.info(`[DISPATCH] Aguardando ${randomDelay / 1000}s para enviar msg para ${clientName} (${rawPhone})...`);
                         await delay(randomDelay);
 
