@@ -38,14 +38,26 @@ export const whatsappMultiService = {
 
         // Dica de ADS / Prevenção de container Restart: Limpar lock de perfil do Chromium
         const authPath = path.join(process.cwd(), '.wwebjs_auth', `session-single_bot_session`);
-        const lock1 = path.join(authPath, 'SingletonLock');
-        const lock2 = path.join(authPath, 'Default', 'SingletonLock');
+        const defaultPath = path.join(authPath, 'Default');
+
+        const locks = [
+            path.join(authPath, 'SingletonLock'),
+            path.join(authPath, 'SingletonCookie'),
+            path.join(authPath, 'SingletonSocket'),
+            path.join(defaultPath, 'SingletonLock'),
+            path.join(defaultPath, 'SingletonCookie'),
+            path.join(defaultPath, 'SingletonSocket')
+        ];
+
         try {
-            if (fs.existsSync(lock1)) fs.unlinkSync(lock1);
-            if (fs.existsSync(lock2)) fs.unlinkSync(lock2);
-            console.log(`[WA-SINGLE] Arquivos SingletonLock limpos preventivamente.`);
+            locks.forEach(lockPath => {
+                if (fs.existsSync(lockPath)) {
+                    fs.unlinkSync(lockPath);
+                    console.log(`[WA-SINGLE] Arquivo de lock removido: ${lockPath}`);
+                }
+            });
         } catch (err) {
-            console.log(`[WA-SINGLE] Erro ao limpar SingletonLock (Pode não existir).`);
+            console.log(`[WA-SINGLE] Aviso ao tentar limpar locks de sessão: ${err}`);
         }
 
         const client = new WhatsAppClient({
@@ -56,7 +68,8 @@ export const whatsappMultiService = {
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
                     '--disable-dev-shm-usage',
-                    '--disable-gpu'
+                    '--disable-gpu',
+                    '--disable-session-crashed-bubble'
                 ]
             }
         });
