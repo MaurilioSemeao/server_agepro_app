@@ -36,6 +36,7 @@ const getAuth = async (userId: string) => {
         access_token: integration.accessToken,
         refresh_token: integration.refreshToken
     });
+
     return oauth2Client;
 };
 
