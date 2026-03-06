@@ -22,11 +22,16 @@ jobs:
             mkdir -p ~/projetos/server_agepro_app
             cd ~/projetos/server_agepro_app
             
-            # Se a pasta estiver vazia, clona. Se não, atualiza.
+            # 2. Lógica Inteligente: Se já for um repositório git, apenas atualiza.
+            # Se não for, limpa o que for lixo (exceto o .env) e clona.
             if [ -d ".git" ]; then
+              echo "Diretório já é um repositório. Atualizando..."
               git pull origin main
             else
-              git clone https://github.com/${{ github.repository }}.git .
+              echo "Pasta existe mas não é git. Preparando para clone..."
+              # Remove tudo EXCETO o arquivo .env para o clone funcionar
+              find . -maxdepth 1 ! -name '.env' ! -name '.' -exec rm -rf {} +
+              git clone https://github.com/MaurilioSemeao/server_agepro_app.git .
             fi
             
             # Sobe os containers (Buildando a imagem nova)
