@@ -1,18 +1,48 @@
-name: Deploy AgPro Dev Local
+name: Deploy AgPro Backend
 
 on:
   push:
-    branches: [ "dev" ] #<<<>>> comit
+    branches: [ dev ] # Dispara o deploy toda vez que você der push na main
 
 jobs:
   deploy:
-    runs-on: self-hosted # <--- Isso diz para rodar na sua VM do VirtualBox
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout do código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
-      - name: Subir Infraestrutura (Docker)
-        run: |
-          # O GitHub Actions vai rodar isso dentro da sua VM
-          cd $GITHUB_WORKSPACE
-          docker-compose up -d --build
+      - name: Executar comandos na VM via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # Entra na pasta do projeto (garanta que ela exista na VM)
+            mkdir -p ~/projetos/server_agepro_app
+            cd ~/projetos/server_agepro_app
+            
+            # 2. Lógica Inteligente: Se já for um repositório git, apenas atualiza.
+            # Se não for, limpa o que for lixo (exceto o .env) e clona.
+            if [ -d ".git" ]; then
+              echo "Diretório já é um repositório. Atualizando..."
+              git pull origin main
+            else
+              echo "Pasta existe mas não é git. Preparando para clone..."
+              # Mova o .env para um local temporário fora do diretório, caso exista
+              if [ -f ".env" ]; then mv .env $HOME/env_agepro_backup; fi
+            
+              # Limpa qualquer outro lixo para deixar a pasta 100% vazia (requisito do git clone)
+              rm -rf ./* ./.[!.]* 2>/dev/null || true
+            
+              # Agora o git clone vai funcionar porque a pasta está vazia
+              git clone https://github.com/MaurilioSemeao/server_agepro_app.git .
+            fi
+            
+            # Devolve o .env para o local original (caso ele tenha ficado no backup na tentativa anterior)
+            if [ -f "$HOME/env_agepro_backup" ]; then 
+              mv $HOME/env_agepro_backup .env
+            fi
+            
+            # Sobe os containers (Buildando a imagem nova)
+            sudo docker-compose up -d --build
