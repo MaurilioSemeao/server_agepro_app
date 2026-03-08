@@ -2,7 +2,7 @@ name: Deploy AgPro Dev Local
 
 on:
   push:
-    branches: [ "dev" ] # Dispara apenas no push para a dev
+    branches: [ "dev" ]
 
 jobs:
   deploy:
