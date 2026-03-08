@@ -2,7 +2,7 @@ name: Deploy AgPro Dev Local
 
 on:
   push:
-    branches: [ "dev" ]
+    branches: [ "dev" ] #<<<>>> comit
 
 jobs:
   deploy:
