@@ -2,23 +2,26 @@ name: Deploy AgPro Backend Local (Dev)
 
 on:
   push:
-    branches: [ dev ] #
+    branches: [ dev ]
 
 jobs:
   deploy:
-    runs-on: self-hosted # <--- Isso faz o GitHub usar a sua VM do VirtualBox
+    runs-on: self-hosted
     steps:
       - name: Checkout do código
-        uses: actions/checkout@v4 # Baixa o código da branch dev na VM
+        uses: actions/checkout@v4
+        with:
+          clean: true # O GitHub vai limpar a pasta aqui
+
+      - name: Recuperar o .env da pasta segura
+        run: |
+          # Copia o arquivo da pasta protegida para a pasta onde o código acabou de cair
+          cp ~/projeto_secrets/.env .
+          
+          # Caso o arquivo não exista no backup, cria um vazio para não travar o docker
+          if [ ! -f ".env" ]; then touch .env; fi
 
       - name: Docker Compose Deploy
         run: |
-          
-          if [ -f ".env" ]; then mv .env $HOME/env_agepro_backup; fi
-          
-          if [ -f "$HOME/env_agepro_backup" ]; then 
-              mv $HOME/env_agepro_backup .env
-
-          # 2. Sobe os containers rebuildando a imagem
-          # Como você adicionou o usuário msdevs ao grupo docker, não precisa de sudo!
+          # Agora o .env está presente e o docker vai subir com as variáveis certas
           docker-compose up -d --build
