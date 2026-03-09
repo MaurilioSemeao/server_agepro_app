@@ -16,9 +16,6 @@ jobs:
           
           if [ -f ".env" ]; then mv .env $HOME/env_agepro_backup; fi
           
-          # Limpa qualquer outro lixo para deixar a pasta 100% vazia (requisito do git clone)
-              rm -rf ./* ./.[!.]* 2>/dev/null || true
-          
           if [ -f "$HOME/env_agepro_backup" ]; then 
               mv $HOME/env_agepro_backup .env
 
