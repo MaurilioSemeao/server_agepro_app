@@ -1,0 +1,39 @@
+name: Deploy AgPro Backend Local (Dev)
+
+on:
+  push:
+    branches: [ dev ] #<<>>
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Backup do .env local (Antes do Checkout)
+        run: |
+          # O passo de Checkout abaixo deleta os arquivos. 
+          # Salvamos o .env (caso ele exista) na pasta Home do usuário temporariamente.
+          if [ -f ".env" ]; then
+            echo "Backup do arquivo .env realizado com sucesso."
+            cp .env ~/env_backup_agpro_dev
+          fi
+
+      - name: Checkout do código
+        uses: actions/checkout@v4
+        with:
+          clean: false # ESSENCIAL: Impede que o GitHub tente deletar a pasta /logs criada pelo servidor root!
+
+      - name: Restaurar o .env
+        run: |
+          # Agora que o código do GitHub foi baixado, trazemos o nosso .env de volta para a pasta do projeto.
+          if [ -f "$HOME/env_backup_agpro_dev" ]; then
+            echo "Restaurando o .env do backup..."
+            cp ~/env_backup_agpro_dev .env
+          else
+            echo "Nenhum .env encontrado no servidor. Criando um vazio para evitar erro no Docker..."
+            touch .env
+          fi
+
+      - name: Docker Compose Deploy
+        run: |
+          # Sobe o container reconstruindo a imagem com o código novo
+          docker-compose up -d --build

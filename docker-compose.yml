@@ -11,6 +11,7 @@ services:
     ports:
       - "80:80"     # Tráfego HTTP Normal (será redirecionado) 
       - "443:443"   # Tráfego HTTPS (SSL gerado pelo certbot)
+      - "${DEV_PORT:-5000}:5000" # Porta DEV (Se não definir nada, expõe a 5000 loca. Se colocar DEV_PORT=127.0.0.1:5000 ele não vaza na Prod)
     # Lê TODAS as variáveis do seu arquivo .env da VPS (Google, Banco, SMTP)
     env_file:
       - .env

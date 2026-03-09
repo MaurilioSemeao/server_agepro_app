@@ -79,19 +79,24 @@ export const integrationController = {
 
                 // Ao criar, o evento 'qr' dentro de initializeClient lidará com o QrCode
                 client.on('qr', async (qr) => {
-                    // Busca o token gerado na memória
-                    const tokenEntry = Object.entries(qrCodeStorage).find(([_, data]) => data.userId === userId);
-                    if (tokenEntry && !emailSent) {
-                        emailSent = true; // Impede que mande os próximos QRs refresh do puppeteer para o email da pessoa
-                        const [token] = tokenEntry;
+                    // Espera 1 segundo para garantir que o service gravou na qrCodeStorage
+                    setTimeout(async () => {
+                        // Busca o token gerado na memória
+                        const tokenEntry = Object.entries(qrCodeStorage).find(([_, data]) => data.userId === userId);
+                        if (tokenEntry && !emailSent) {
+                            emailSent = true; // Impede que mande os próximos QRs refresh do puppeteer para o email da pessoa
+                            const [token] = tokenEntry;
 
-                        // Determinar a URL pública do servidor (ex: ngrok, cloudflare) ou localhost na variável de ambiente
-                        const serverUrl = process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 5000}`;
-                        const linkUrl = `${serverUrl}/integrations/whatsapp/qrcode/${token}`;
+                            // Determinar a URL pública do servidor (ex: ngrok, cloudflare) ou localhost na variável de ambiente
+                            let serverUrl = process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 5000}`;
+                            serverUrl = serverUrl.replace(/\/$/, ''); // Remove trailing slash se houver
+                            const linkUrl = `${serverUrl}/integrations/whatsapp/qrcode/${token}`;
 
-                        // Dispara o email
-                        await emailService.sendQRCodeLink(userEmail, linkUrl);
-                    }
+                            console.log(`[INTEGRATION] Disparando email com link do QR: ${linkUrl}`);
+                            // Dispara o email
+                            await emailService.sendQRCodeLink(userEmail, linkUrl);
+                        }
+                    }, 1000); // 1 segundo de atraso
                 });
             }).catch(error => {
                 console.error('[INTEGRATION] Falha silenciosa ao abrir WhatsApp:', error);
@@ -144,9 +149,15 @@ export const integrationController = {
         const { token } = req.params;
         const entry = qrCodeStorage[token];
 
+        console.log(`[QR-WEB] Acessando Rota Pública de QR. Token recebido: ${token}`);
         if (!entry) {
-            return res.status(404).send('<h1>QR Code Expirado ou Inválido.</h1><p>Solicite uma nova conexão pelo Aplicativo Mobile.</p>');
+            console.error(`[QR-WEB] Erro: Token ${token} não encontrado em memória. Provavelmente expirou.`);
+            return res.status(404).type('html').send('<h1>QR Code Expirado ou Inválido.</h1><p>Solicite uma nova conexão pelo Aplicativo Mobile.</p>');
         }
+        console.log(`[QR-WEB] Token Válido para o usuário: ${entry.userId}. Renderizando página HTML.`);
+
+        // Força o cabeçalho HTML para nenhum navegador interpretar como texto puro
+        res.type('html');
 
         // Renderiza HTML simples com biblioteca para desenhar QR
         res.send(`
