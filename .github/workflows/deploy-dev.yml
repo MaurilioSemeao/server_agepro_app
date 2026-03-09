@@ -8,19 +8,10 @@ jobs:
   deploy:
     runs-on: self-hosted
     steps:
-      - name: Corrigir Permissões Criadas pelo Docker (Antes do Checkout)
-        run: |
-          # O Docker cria arquivos de log como "root", o que impede o GitHub Actions (msdevs)
-          # de deletar a pasta na hora de atualizar. Isso muda o dono da pasta de volta para nós.
-          if [ -d "logs" ]; then
-            sudo chown -R $USER:$USER logs/
-            sudo chmod -R 777 logs/
-          fi
-
       - name: Backup do .env local (Antes do Checkout)
         run: |
-          # O passo de Checkout abaixo deleta toda a pasta para colocar o código novo.
-          # Portanto, salvamos o .env (caso ele exista) na pasta Home do usuário do servidor temporariamente.
+          # O passo de Checkout abaixo deleta os arquivos. 
+          # Salvamos o .env (caso ele exista) na pasta Home do usuário temporariamente.
           if [ -f ".env" ]; then
             echo "Backup do arquivo .env realizado com sucesso."
             cp .env ~/env_backup_agpro_dev
@@ -29,7 +20,7 @@ jobs:
       - name: Checkout do código
         uses: actions/checkout@v4
         with:
-          clean: true # Limpa todos os arquivos que não vieram do GitHub (incluindo o .env se não tivéssemos salvo)
+          clean: false # ESSENCIAL: Impede que o GitHub tente deletar a pasta /logs criada pelo servidor root!
 
       - name: Restaurar o .env
         run: |
