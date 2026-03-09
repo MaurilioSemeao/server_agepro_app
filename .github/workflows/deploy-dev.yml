@@ -2,7 +2,7 @@ name: Deploy AgPro Backend Local (Dev)
 
 on:
   push:
-    branches: [ dev ] # Dispara apenas quando você envia para a branch dev
+    branches: [ dev ] #
 
 jobs:
   deploy:
