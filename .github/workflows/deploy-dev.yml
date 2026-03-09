@@ -1,48 +1,24 @@
-name: Deploy AgPro Backend
+name: Deploy AgPro Backend Local (Dev)
 
 on:
   push:
-    branches: [ dev ] # Dispara o deploy toda vez que você der push na main
+    branches: [ dev ] # Dispara apenas quando você envia para a branch dev
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted # <--- Isso faz o GitHub usar a sua VM do VirtualBox
     steps:
       - name: Checkout do código
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4 # Baixa o código da branch dev na VM
 
-      - name: Executar comandos na VM via SSH
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.REMOTE_HOST }}
-          username: ${{ secrets.REMOTE_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            # Entra na pasta do projeto (garanta que ela exista na VM)
-            mkdir -p ~/projetos/server_agepro_app
-            cd ~/projetos/server_agepro_app
-            
-            # 2. Lógica Inteligente: Se já for um repositório git, apenas atualiza.
-            # Se não for, limpa o que for lixo (exceto o .env) e clona.
-            if [ -d ".git" ]; then
-              echo "Diretório já é um repositório. Atualizando..."
-              git pull origin main
-            else
-              echo "Pasta existe mas não é git. Preparando para clone..."
-              # Mova o .env para um local temporário fora do diretório, caso exista
-              if [ -f ".env" ]; then mv .env $HOME/env_agepro_backup; fi
-            
-              # Limpa qualquer outro lixo para deixar a pasta 100% vazia (requisito do git clone)
-              rm -rf ./* ./.[!.]* 2>/dev/null || true
-            
-              # Agora o git clone vai funcionar porque a pasta está vazia
-              git clone https://github.com/MaurilioSemeao/server_agepro_app.git .
-            fi
-            
-            # Devolve o .env para o local original (caso ele tenha ficado no backup na tentativa anterior)
-            if [ -f "$HOME/env_agepro_backup" ]; then 
-              mv $HOME/env_agepro_backup .env
-            fi
-            
-            # Sobe os containers (Buildando a imagem nova)
-            sudo docker-compose up -d --build
+      - name: Docker Compose Deploy
+        run: |
+          # O Runner já coloca você dentro da pasta do projeto automaticamente
+          # 1. Garante que o arquivo .env existe (ou usa um padrão de dev)
+          if [ ! -f ".env" ]; then
+            echo "Aviso: Arquivo .env não encontrado. Usando variáveis do sistema ou padrão."
+          fi
+
+          # 2. Sobe os containers rebuildando a imagem
+          # Como você adicionou o usuário msdevs ao grupo docker, não precisa de sudo!
+          docker-compose up -d --build
