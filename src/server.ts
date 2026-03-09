@@ -128,7 +128,7 @@ cronService.start();
 
 const finalPort = process.env.NODE_ENV === 'production' ? 443 : PORT;
 
-server.listen(finalPort, () => {
-    logger.info(`[SERVER] Inicializado (HTTP/HTTPS + WebSocket) rodando na porta ${finalPort}`);
+server.listen(finalPort, '0.0.0.0', () => {
+    logger.info(`[SERVER] Inicializado (HTTP/HTTPS + WebSocket) rodando na porta ${finalPort} em 0.0.0.0`);
 });
 
