@@ -152,9 +152,12 @@ export const integrationController = {
         console.log(`[QR-WEB] Acessando Rota Pública de QR. Token recebido: ${token}`);
         if (!entry) {
             console.error(`[QR-WEB] Erro: Token ${token} não encontrado em memória. Provavelmente expirou.`);
-            return res.status(404).send('<h1>QR Code Expirado ou Inválido.</h1><p>Solicite uma nova conexão pelo Aplicativo Mobile.</p>');
+            return res.status(404).type('html').send('<h1>QR Code Expirado ou Inválido.</h1><p>Solicite uma nova conexão pelo Aplicativo Mobile.</p>');
         }
         console.log(`[QR-WEB] Token Válido para o usuário: ${entry.userId}. Renderizando página HTML.`);
+
+        // Força o cabeçalho HTML para nenhum navegador interpretar como texto puro
+        res.type('html');
 
         // Renderiza HTML simples com biblioteca para desenhar QR
         res.send(`
