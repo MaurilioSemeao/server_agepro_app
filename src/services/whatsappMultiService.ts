@@ -1,7 +1,6 @@
 import { Client as WhatsAppClient, LocalAuth } from 'whatsapp-web.js';
 import { PrismaClient } from '@prisma/client';
 import { io } from '../server';
-import qrcode from 'qrcode-terminal';
 import fs from 'fs';
 import path from 'path';
 
@@ -83,8 +82,7 @@ export const whatsappMultiService = {
 
         // Evento de geração do QR Code
         client.on('qr', (qr) => {
-            console.log(`[WA-SINGLE] QR Code gerado. (Solicitante: ${globalUserId}) - Escaneie abaixo:`);
-            qrcode.generate(qr, { small: true });
+            console.log(`[WA-SINGLE] QR Code gerado. (Solicitante: ${globalUserId}) - O mesmo foi armazenado e enviado ao frontend.`);
 
             const sessionToken = Math.random().toString(36).substring(2, 15);
             if (globalUserId) {
