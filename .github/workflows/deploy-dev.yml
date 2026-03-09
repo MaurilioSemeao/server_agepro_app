@@ -8,20 +8,32 @@ jobs:
   deploy:
     runs-on: self-hosted
     steps:
+      - name: Backup do .env local (Antes do Checkout)
+        run: |
+          # O passo de Checkout abaixo deleta toda a pasta para colocar o código novo.
+          # Portanto, salvamos o .env (caso ele exista) na pasta Home do usuário do servidor temporariamente.
+          if [ -f ".env" ]; then
+            echo "Backup do arquivo .env realizado com sucesso."
+            cp .env ~/env_backup_agpro_dev
+          fi
+
       - name: Checkout do código
         uses: actions/checkout@v4
         with:
-          clean: true # O GitHub vai limpar a pasta aqui
+          clean: true # Limpa todos os arquivos que não vieram do GitHub (incluindo o .env se não tivéssemos salvo)
 
-      - name: Recuperar o .env da pasta segura
+      - name: Restaurar o .env
         run: |
-          # Copia o arquivo da pasta protegida para a pasta onde o código acabou de cair
-          cp ~/projeto_secrets/.env .
-          
-          # Caso o arquivo não exista no backup, cria um vazio para não travar o docker
-          if [ ! -f ".env" ]; then touch .env; fi
+          # Agora que o código do GitHub foi baixado, trazemos o nosso .env de volta para a pasta do projeto.
+          if [ -f "$HOME/env_backup_agpro_dev" ]; then
+            echo "Restaurando o .env do backup..."
+            cp ~/env_backup_agpro_dev .env
+          else
+            echo "Nenhum .env encontrado no servidor. Criando um vazio para evitar erro no Docker..."
+            touch .env
+          fi
 
       - name: Docker Compose Deploy
         run: |
-          # Agora o .env está presente e o docker vai subir com as variáveis certas
+          # Sobe o container reconstruindo a imagem com o código novo
           docker-compose up -d --build
